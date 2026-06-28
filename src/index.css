@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #1a1f36;
+  --color-primary-light: #2d3561;
+  --color-accent: #d4af37;
+  --color-accent-light: #f5e6c0;
+  --color-background: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-text: #1a1f36;
+  --color-text-muted: #6b7280;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-primary font-sans antialiased;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-white/10 backdrop-blur-md border border-white/20;
+  }
+
+  .gold-text {
+    @apply bg-gold-gradient bg-clip-text text-transparent;
+  }
+
+  .btn-gold {
+    @apply bg-gold-gradient text-primary font-semibold rounded-xl
+           px-6 py-3 transition-all duration-300
+           hover:shadow-gold-glow hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .btn-outline {
+    @apply border-2 border-accent text-accent font-semibold rounded-xl
+           px-6 py-3 transition-all duration-300
+           hover:bg-accent hover:text-primary hover:shadow-gold-glow;
+  }
+
+  .card {
+    @apply bg-surface rounded-2xl shadow-card transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply hover:shadow-card-hover hover:-translate-y-1;
+  }
+
+  .input-field {
+    @apply w-full bg-surface border-2 border-gray-200 rounded-xl
+           px-4 py-3 text-primary placeholder:text-muted
+           focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20
+           transition-all duration-200;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

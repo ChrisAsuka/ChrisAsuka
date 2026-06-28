@@ -1,0 +1,181 @@
+// 生产环境 PostgreSQL 版本 Schema（部署时使用 prisma/schema-postgresql.prisma）
+// 切换方式: npx prisma validate --schema prisma/schema-postgresql.prisma
+//          npx prisma migrate dev --schema prisma/schema-postgresql.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  avatar    String?
+  balance   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  transactions Transaction[]
+  orders       Order[]
+  addresses    Address[]
+  giftCards    GiftCard[]
+}
+
+enum Role { USER ADMIN }
+
+model GiftCardCategory {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  icon        String   @default("Gift")
+  sort        Int      @default(0)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  templates GiftCardTemplate[]
+}
+
+model GiftCardTemplate {
+  id                    String   @id @default(uuid())
+  name                  String
+  categoryId            String
+  amount                Int
+  validDays             Int
+  selectCount           Int
+  maxQuantityPerProduct Int      @default(1)
+  createdAt             DateTime @default(now())
+  category  GiftCardCategory   @relation(fields: [categoryId], references: [id])
+  products  TemplateProduct[]
+  giftCards GiftCard[]
+}
+
+model TemplateProduct {
+  id         String @id @default(uuid())
+  templateId String
+  productId  String
+  template GiftCardTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  product  Product          @relation(fields: [productId], references: [id])
+  @@unique([templateId, productId])
+}
+
+model GiftCard {
+  id         String     @id @default(uuid())
+  code       String     @unique
+  amount     Int
+  status     CardStatus @default(ACTIVE)
+  templateId String
+  userId     String?
+  createdAt  DateTime   @default(now())
+  expiresAt  DateTime
+  usedAt     DateTime?
+  template GiftCardTemplate @relation(fields: [templateId], references: [id])
+  user     User?             @relation(fields: [userId], references: [id])
+  orders   Order[]
+  @@index([status])
+  @@index([code])
+}
+
+enum CardStatus { ACTIVE USED EXPIRED }
+
+model ProductCategory {
+  id       String  @id @default(uuid())
+  name     String
+  parentId String?
+  icon     String  @default("Package")
+  sort     Int     @default(0)
+  products Product[]
+}
+
+model Product {
+  id          String        @id @default(uuid())
+  name        String
+  categoryId  String
+  description String
+  image       String
+  price       Int
+  stock       Int           @default(0)
+  status      ProductStatus @default(ON)
+  specs       Json?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  category         ProductCategory  @relation(fields: [categoryId], references: [id])
+  templateProducts TemplateProduct[]
+  orderItems       OrderItem[]
+}
+
+enum ProductStatus { ON OFF }
+
+model Order {
+  id               String      @id @default(uuid())
+  orderNo          String      @unique
+  giftCardId       String
+  userId           String
+  status           OrderStatus @default(PAID)
+  totalAmount      Int
+  addressSnapshot  Json
+  deliveryMethod   Json
+  trackingNumber   String?
+  logisticsCompany String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  giftCard GiftCard     @relation(fields: [giftCardId], references: [id])
+  user     User         @relation(fields: [userId], references: [id])
+  items    OrderItem[]
+  @@index([userId])
+  @@index([status])
+}
+
+enum OrderStatus { PAID SHIPPING DELIVERING DELIVERED COMPLETED REFUNDING REFUNDED RETURNING RETURNED }
+
+model OrderItem {
+  id           String  @id @default(uuid())
+  orderId      String
+  productId    String
+  productName  String
+  productImage String
+  quantity     Int
+  spec         String?
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model Transaction {
+  id           String          @id @default(uuid())
+  userId       String
+  type         TransactionType
+  amount       Int
+  description  String
+  giftCardCode String?
+  balance      Int
+  timestamp    DateTime        @default(now())
+  user User @relation(fields: [userId], references: [id])
+  @@index([userId])
+}
+
+enum TransactionType { CREDIT DEBIT }
+
+model Address {
+  id        String  @id @default(uuid())
+  userId    String
+  name      String
+  phone     String
+  province  String
+  city      String
+  district  String
+  detail    String
+  isDefault Boolean @default(false)
+  user User @relation(fields: [userId], references: [id])
+}
+
+model LogisticsCompany {
+  id      String  @id @default(uuid())
+  name    String
+  code    String  @unique
+  enabled Boolean @default(true)
+}

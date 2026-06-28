@@ -1,67 +1,83 @@
-// 用户数据
+// ========== 枚举 ==========
+export type Role = "USER" | "ADMIN";
+export type CardStatus = "ACTIVE" | "USED" | "EXPIRED";
+export type ProductStatus = "ON" | "OFF";
+export type TransactionType = "CREDIT" | "DEBIT";
+export type OrderStatus =
+  | "PAID"
+  | "SHIPPING"
+  | "DELIVERING"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "REFUNDING"
+  | "REFUNDED"
+  | "RETURNING"
+  | "RETURNED";
+
+// ========== 用户 ==========
 export interface User {
   id: string;
   username: string;
   email: string;
+  role: Role;
   avatar?: string;
   balance: number;
   createdAt: string;
+  updatedAt?: string;
 }
 
-// 礼品卡状态
-export type GiftCardStatus = "active" | "used" | "expired";
-
-// 礼品卡数据
-export interface GiftCard {
-  code: string;
-  amount: number;
-  status: GiftCardStatus;
-  createdAt: string;
-  expiresAt: string;
-  usedAt?: string;
-  usedBy?: string;
-  templateId: string;
-}
-
-// 礼品卡分类
+// ========== 礼品卡分类 ==========
 export interface GiftCardCategory {
   id: string;
   name: string;
+  description?: string;
   icon: string;
   sort: number;
   enabled: boolean;
-  amountRange: [number, number];
+  createdAt: string;
+  _count?: { templates: number };
 }
 
-// 礼品卡模板（关联商品，N选M配置）
+// ========== 礼品卡模板 ==========
 export interface GiftCardTemplate {
   id: string;
   name: string;
   categoryId: string;
   amount: number;
   validDays: number;
-  productIds: string[];
-  selectCount: number; // M: 用户必须选择的数量
+  selectCount: number;
   maxQuantityPerProduct: number;
   createdAt: string;
+  category?: GiftCardCategory;
+  products?: { product: Product }[];
+  giftCards?: GiftCard[];
 }
 
-// 商品分类
+// ========== 礼品卡 ==========
+export interface GiftCard {
+  id: string;
+  code: string;
+  amount: number;
+  status: CardStatus;
+  templateId: string;
+  userId?: string;
+  createdAt: string;
+  expiresAt: string;
+  usedAt?: string;
+  template?: GiftCardTemplate;
+}
+
+// ========== 商品分类 ==========
 export interface ProductCategory {
   id: string;
   name: string;
-  parentId: string | null;
+  parentId?: string;
   icon: string;
   sort: number;
+  _count?: { products: number };
 }
 
-// 商品规格
-export interface ProductSpec {
-  name: string;
-  values: string[];
-}
-
-// 商品
+// ========== 商品 ==========
 export interface Product {
   id: string;
   name: string;
@@ -70,38 +86,58 @@ export interface Product {
   image: string;
   price: number;
   stock: number;
-  status: "on" | "off";
-  specs: ProductSpec[];
+  status: ProductStatus;
+  specs?: unknown;
+  createdAt: string;
+  updatedAt?: string;
+  category?: ProductCategory;
 }
 
-// 交易类型
-export type TransactionType = "credit" | "debit";
-
-// 交易记录
-export interface Transaction {
+// ========== 订单 ==========
+export interface OrderItem {
   id: string;
-  type: TransactionType;
-  amount: number;
-  description: string;
-  giftCardCode?: string;
-  timestamp: string;
-  balance: number;
+  orderId: string;
+  productId: string;
+  productName: string;
+  productImage: string;
+  quantity: number;
+  spec?: string;
 }
 
-// 订单状态
-export type OrderStatus =
-  | "pending"
-  | "paid"
-  | "shipping"
-  | "delivering"
-  | "delivered"
-  | "completed"
-  | "refunding"
-  | "refunded"
-  | "returning"
-  | "returned";
+export interface Order {
+  id: string;
+  orderNo: string;
+  giftCardId: string;
+  userId: string;
+  status: OrderStatus;
+  totalAmount: number;
+  addressSnapshot: AddressSnapshot;
+  deliveryMethod: DeliveryMethodData;
+  trackingNumber?: string;
+  logisticsCompany?: string;
+  createdAt: string;
+  updatedAt?: string;
+  items?: OrderItem[];
+  giftCard?: GiftCard & { template?: GiftCardTemplate };
+  user?: { username: string; email: string };
+}
 
-// 配送方式
+export interface AddressSnapshot {
+  name: string;
+  phone: string;
+  province: string;
+  city: string;
+  district: string;
+  detail: string;
+}
+
+export interface DeliveryMethodData {
+  id: string;
+  name: string;
+  fee: number;
+}
+
+// ========== 配送方式（前端静态） ==========
 export interface DeliveryMethod {
   id: string;
   name: string;
@@ -110,9 +146,10 @@ export interface DeliveryMethod {
   estimatedDays: string;
 }
 
-// 收货地址
+// ========== 收货地址 ==========
 export interface Address {
   id: string;
+  userId: string;
   name: string;
   phone: string;
   province: string;
@@ -122,33 +159,22 @@ export interface Address {
   isDefault: boolean;
 }
 
-// 订单商品项
-export interface OrderItem {
-  productId: string;
-  productName: string;
-  productImage: string;
-  quantity: number;
-  spec?: string;
-}
-
-// 订单
-export interface Order {
-  id: string;
-  giftCardCode: string;
-  items: OrderItem[];
-  status: OrderStatus;
-  address: Address;
-  deliveryMethod: DeliveryMethod;
-  totalAmount: number;
-  createdAt: string;
-  trackingNumber?: string;
-  logisticsCompany?: string;
-}
-
-// 物流公司
+// ========== 物流公司 ==========
 export interface LogisticsCompany {
   id: string;
   name: string;
   code: string;
   enabled: boolean;
+}
+
+// ========== 交易记录 ==========
+export interface Transaction {
+  id: string;
+  userId: string;
+  type: TransactionType;
+  amount: number;
+  description: string;
+  giftCardCode?: string;
+  balance: number;
+  timestamp: string;
 }

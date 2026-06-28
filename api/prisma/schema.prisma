@@ -1,0 +1,194 @@
+// 礼品卡兑换系统数据库模型（SQLite 开发版）
+// 生产环境使用 PostgreSQL，见 schema-postgresql.prisma（支持 Json 与 enum）
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ========== 用户 ==========
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      String   @default("USER") // USER | ADMIN
+  avatar    String?
+  balance   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+  orders       Order[]
+  addresses    Address[]
+  giftCards    GiftCard[]
+}
+
+// ========== 礼品卡分类 ==========
+model GiftCardCategory {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  icon        String   @default("Gift")
+  sort        Int      @default(0)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  templates GiftCardTemplate[]
+}
+
+// ========== 礼品卡模板（N选M配置）==========
+model GiftCardTemplate {
+  id                    String   @id @default(uuid())
+  name                  String
+  categoryId            String
+  amount                Int
+  validDays             Int
+  selectCount           Int // M: 用户必须选择的商品数量
+  maxQuantityPerProduct Int      @default(1)
+  createdAt             DateTime @default(now())
+
+  category  GiftCardCategory   @relation(fields: [categoryId], references: [id])
+  products  TemplateProduct[]
+  giftCards GiftCard[]
+}
+
+model TemplateProduct {
+  id         String @id @default(uuid())
+  templateId String
+  productId  String
+
+  template GiftCardTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  product  Product          @relation(fields: [productId], references: [id])
+
+  @@unique([templateId, productId])
+}
+
+// ========== 礼品卡 ==========
+model GiftCard {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  amount     Int
+  status     String   @default("ACTIVE") // ACTIVE | USED | EXPIRED
+  templateId String
+  userId     String?
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  usedAt     DateTime?
+
+  template GiftCardTemplate @relation(fields: [templateId], references: [id])
+  user     User?             @relation(fields: [userId], references: [id])
+  orders   Order[]
+
+  @@index([status])
+  @@index([code])
+}
+
+// ========== 商品分类 ==========
+model ProductCategory {
+  id       String  @id @default(uuid())
+  name     String
+  parentId String?
+  icon     String  @default("Package")
+  sort     Int     @default(0)
+
+  products Product[]
+}
+
+// ========== 商品 ==========
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  categoryId  String
+  description String
+  image       String
+  price       Int
+  stock       Int      @default(0)
+  status      String   @default("ON") // ON | OFF
+  specs       String? // JSON 字符串存储
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category         ProductCategory  @relation(fields: [categoryId], references: [id])
+  templateProducts TemplateProduct[]
+  orderItems       OrderItem[]
+}
+
+// ========== 订单 ==========
+model Order {
+  id               String   @id @default(uuid())
+  orderNo          String   @unique
+  giftCardId       String
+  userId           String
+  status           String   @default("PAID") // PAID|SHIPPING|DELIVERING|DELIVERED|COMPLETED|REFUNDING|REFUNDED|RETURNING|RETURNED
+  totalAmount      Int
+  addressSnapshot  String // JSON 字符串存储
+  deliveryMethod   String // JSON 字符串存储
+  trackingNumber   String?
+  logisticsCompany String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  giftCard GiftCard     @relation(fields: [giftCardId], references: [id])
+  user     User         @relation(fields: [userId], references: [id])
+  items    OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id           String  @id @default(uuid())
+  orderId      String
+  productId    String
+  productName  String
+  productImage String
+  quantity     Int
+  spec         String?
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}
+
+// ========== 交易记录 ==========
+model Transaction {
+  id           String   @id @default(uuid())
+  userId       String
+  type         String // CREDIT | DEBIT
+  amount       Int
+  description  String
+  giftCardCode String?
+  balance      Int
+  timestamp    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// ========== 收货地址 ==========
+model Address {
+  id        String  @id @default(uuid())
+  userId    String
+  name      String
+  phone     String
+  province  String
+  city      String
+  district  String
+  detail    String
+  isDefault Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ========== 物流公司 ==========
+model LogisticsCompany {
+  id      String  @id @default(uuid())
+  name    String
+  code    String  @unique
+  enabled Boolean @default(true)
+}
